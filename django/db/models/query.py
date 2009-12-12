@@ -1,7 +1,7 @@
 """
 The main QuerySet implementation. This provides the public API for the ORM.
 """
-
+from warnings import warn
 from copy import deepcopy
 from django.db import connection, transaction, IntegrityError
 from django.db.models.aggregates import Aggregate
@@ -30,6 +30,7 @@ class QuerySet(object):
         self._result_cache = None
         self._iter = None
         self._sticky_filter = False
+        self._already_iterated = 0
 
     ########################
     # PYTHON MAGIC METHODS #
@@ -257,6 +258,11 @@ class QuerySet(object):
                 else:
                     init_list.append(field.attname)
             model_cls = deferred_class_factory(self.model, skip)
+
+      
+        self._already_iterated += 1
+        if self._already_iterated > 1:
+           warn(".iterator has been called %s times -- perhaps you should allow result caching." % self._already_iterated)
 
         for row in self.query.results_iter():
             if fill_cache:
@@ -769,6 +775,7 @@ class ValuesQuerySet(QuerySet):
         super(ValuesQuerySet, self).__init__(*args, **kwargs)
         # select_related isn't supported in values(). (FIXME -#3358)
         self.query.select_related = False
+        self._already_iterated = 0
 
         # QuerySet.clone() will also set up the _fields attribute with the
         # names of the model fields to select.
@@ -780,6 +787,10 @@ class ValuesQuerySet(QuerySet):
         aggregate_names = self.query.aggregate_select.keys()
 
         names = extra_names + field_names + aggregate_names
+
+        self._already_iterated += 1
+        if self._already_iterated > 1:
+           warn(".iterator has been called %s times -- perhaps you should allow result caching." % self._already_iterated)
 
         for row in self.query.results_iter():
             yield dict(zip(names, row))
@@ -903,6 +914,10 @@ class ValuesListQuerySet(ValuesQuerySet):
             else:
                 fields = names
 
+            self._already_iterated += 1
+            if self._already_iterated > 1:
+                warn(".iterator has been called %s times -- perhaps you should allow result caching." % self._already_iterated)
+
             for row in self.query.results_iter():
                 data = dict(zip(names, row))
                 yield tuple([data[f] for f in fields])
@@ -915,6 +930,10 @@ class ValuesListQuerySet(ValuesQuerySet):
 
 class DateQuerySet(QuerySet):
     def iterator(self):
+        self._already_iterated += 1
+        if self._already_iterated > 1:
+           warn(".iterator has been called %s times -- perhaps you should allow result caching." % self._already_iterated)
+
         return self.query.results_iter()
 
     def _setup_query(self):

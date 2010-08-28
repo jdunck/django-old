@@ -11,6 +11,26 @@ class Command(NoArgsCommand):
 
     requires_model_validation = False
 
+    def ipython(self):
+        import IPython
+        # Explicitly pass an empty list as arguments, because otherwise IPython
+        # would use sys.argv from this script.
+        shell = IPython.Shell.IPShell(argv=[])
+        shell.mainloop()
+
+    def bpython(self):
+        import bpython
+        bpython.embed()
+
+    def smart_shell(self):
+        shells = ('ipython', 'bpython')
+        for shell in shells:
+            try:
+                return getattr(self, shell)()
+            except ImportError:
+                pass
+        raise ImportError
+
     def handle_noargs(self, **options):
         # XXX: (Temporary) workaround for ticket #1796: force early loading of all
         # models from installed apps.
@@ -23,11 +43,7 @@ class Command(NoArgsCommand):
             if use_plain:
                 # Don't bother loading IPython, because the user wants plain Python.
                 raise ImportError
-            import IPython
-            # Explicitly pass an empty list as arguments, because otherwise IPython
-            # would use sys.argv from this script.
-            shell = IPython.Shell.IPShell(argv=[])
-            shell.mainloop()
+            self.smart_shell()
         except ImportError:
             import code
             # Set up a dictionary to serve as the environment for the shell, so

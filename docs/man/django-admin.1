@@ -65,10 +65,10 @@ for help on the KEY=val pairs.
 Starts a lightweight Web server for development.
 .TP
 .BI "shell [" "\-\-plain" "]"
-Runs a Python interactive interpreter. Tries to use IPython, if it's available.
+Runs a Python interactive interpreter. Tries to use IPython or bpython if either is available.
 The
 .BI \-\-plain
-option forces the use of the standard Python interpreter even when IPython is
+option forces the use of the standard Python interpreter even if IPython or bpython is
 installed.
 .TP
 .BI "sql [" "appname ..." "]"
@@ -131,7 +131,7 @@ Lets you manually add a directory the Python path,
 e.g. "/home/djangoprojects/myproject".
 .TP
 .I \-\-plain
-Use plain Python, not IPython, for the "shell" command.
+Use plain Python, not IPython or bpython, for the "shell" command.
 .TP
 .I \-\-noinput
 Do not prompt the user for input.

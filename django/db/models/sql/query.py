@@ -230,6 +230,10 @@ class Query(object):
         Creates a copy of the current instance. The 'kwargs' parameter can be
         used by clients to update attributes after copying has taken place.
         """
+        
+        if self.__class__ == klass:
+            return self
+        
         obj = Empty()
         obj.__class__ = klass or self.__class__
         obj.model = self.model

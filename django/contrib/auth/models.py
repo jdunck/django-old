@@ -350,33 +350,36 @@ class User(models.Model):
         from django.core.mail import send_mail
         send_mail(subject, message, from_email, [self.email])
 
+    def get_profile_queryset(self):
+        from django.conf import settings
+        if not getattr(settings, 'AUTH_PROFILE_MODULE', False):
+            raise SiteProfileNotAvailable('You need to set AUTH_PROFILE_MO'
+                                          'DULE in your project settings')
+        try:
+            app_label, model_name = settings.AUTH_PROFILE_MODULE.split('.')
+        except ValueError:
+            raise SiteProfileNotAvailable('app_label and model_name should'
+                    ' be separated by a dot in the AUTH_PROFILE_MODULE set'
+                    'ting')
+
+        try:
+            model = models.get_model(app_label, model_name)
+            if model is None:
+                raise SiteProfileNotAvailable('Unable to load the profile '
+                    'model, check AUTH_PROFILE_MODULE in your project sett'
+                    'ings')
+            return model._default_manager.using(self._state.db).filter(user__id__exact=self.id)
+        except (ImportError, ImproperlyConfigured):
+            raise SiteProfileNotAvailable
+
     def get_profile(self):
         """
         Returns site-specific profile for this user. Raises
         SiteProfileNotAvailable if this site does not allow profiles.
         """
         if not hasattr(self, '_profile_cache'):
-            from django.conf import settings
-            if not getattr(settings, 'AUTH_PROFILE_MODULE', False):
-                raise SiteProfileNotAvailable('You need to set AUTH_PROFILE_MO'
-                                              'DULE in your project settings')
-            try:
-                app_label, model_name = settings.AUTH_PROFILE_MODULE.split('.')
-            except ValueError:
-                raise SiteProfileNotAvailable('app_label and model_name should'
-                        ' be separated by a dot in the AUTH_PROFILE_MODULE set'
-                        'ting')
-
-            try:
-                model = models.get_model(app_label, model_name)
-                if model is None:
-                    raise SiteProfileNotAvailable('Unable to load the profile '
-                        'model, check AUTH_PROFILE_MODULE in your project sett'
-                        'ings')
-                self._profile_cache = model._default_manager.using(self._state.db).get(user__id__exact=self.id)
-                self._profile_cache.user = self
-            except (ImportError, ImproperlyConfigured):
-                raise SiteProfileNotAvailable
+            self._profile_cache = self.get_profile_queryset().get()
+            self._profile_cache.user = self
         return self._profile_cache
 
 
